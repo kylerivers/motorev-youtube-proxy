@@ -1,5 +1,3 @@
-import ytdl from '@distube/ytdl-core';
-
 export default async function handler(req, res) {
   // Enable CORS for Railway requests
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,46 +20,60 @@ export default async function handler(req, res) {
   }
   
   try {
-    console.log(`🎵 [VERCEL PROXY] Extracting audio for: ${id}`);
+    console.log(`🎵 [VERCEL PROXY] Simple HTML extraction for: ${id}`);
     
-    // Use @distube/ytdl-core with clean IP from Vercel
-    const info = await ytdl.getInfo(id, {
-      requestOptions: {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate',
-          'Connection': 'keep-alive'
-        }
+    // Simple HTML extraction without file system dependencies
+    const response = await fetch(`https://www.youtube.com/watch?v=${id}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive'
       }
     });
     
-    if (!info || !info.formats) {
-      return res.status(404).json({ error: 'No video info found' });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const html = await response.text();
+    
+    // Extract player response from HTML
+    const playerResponseMatch = html.match(/var ytInitialPlayerResponse = ({.*?});/s);
+    if (!playerResponseMatch) {
+      throw new Error('No player response found in HTML');
+    }
+    
+    const playerResponse = JSON.parse(playerResponseMatch[1]);
+    
+    if (!playerResponse.streamingData || !playerResponse.streamingData.adaptiveFormats) {
+      throw new Error('No streaming data found');
     }
     
     // Filter for audio-only formats
-    const audioFormats = info.formats.filter(f => 
-      f.hasAudio && !f.hasVideo && f.url && f.url.includes('googlevideo.com')
+    const audioFormats = playerResponse.streamingData.adaptiveFormats.filter(f => 
+      f.mimeType && f.mimeType.includes('audio/') && f.url && 
+      !f.url.includes('youtube.com/watch')
     );
     
     if (audioFormats.length === 0) {
-      return res.status(404).json({ error: 'No audio formats found' });
+      throw new Error('No audio formats found');
     }
     
     // Get best quality audio
-    const bestAudio = audioFormats.sort((a, b) => 
-      (b.audioBitrate || 0) - (a.audioBitrate || 0)
-    )[0];
+    const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
     
-    console.log(`🎵 [VERCEL PROXY] SUCCESS: Found audio URL for ${info.videoDetails.title}`);
+    const title = playerResponse.videoDetails?.title || 'Unknown Title';
+    const author = playerResponse.videoDetails?.author || 'Unknown Artist';
+    const duration = parseInt(playerResponse.videoDetails?.lengthSeconds) || 0;
+    
+    console.log(`🎵 [VERCEL PROXY] SUCCESS: Found audio URL for ${title}`);
     
     return res.json({ 
       audioUrl: bestAudio.url,
-      title: info.videoDetails.title,
-      artist: info.videoDetails.author?.name || 'Unknown Artist',
-      duration: parseInt(info.videoDetails.lengthSeconds) || 0,
+      title: title,
+      artist: author,
+      duration: duration,
       videoId: id
     });
     
