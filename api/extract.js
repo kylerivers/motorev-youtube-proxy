@@ -939,7 +939,8 @@ async function yt1sBypass(videoId) {
 }
 
 async function attemptExtraction(videoId, strategy) {
-  const sessionId = generateSessionFingerprint();
+  const fingerprint = generateBrowserFingerprint();
+  const sessionId = fingerprint.sessionId;
   
   switch (strategy) {
     case 'mobile_bypass':
@@ -961,11 +962,12 @@ async function attemptExtraction(videoId, strategy) {
 
 async function mobileBypass(videoId, sessionId) {
   // Mimic mobile YouTube app request
+  const geoHeaders = GEOLOCATION_HEADERS['us'];
   const response = await fetch(`https://m.youtube.com/watch?v=${videoId}`, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': getRandomElement(LANGUAGES),
+      'Accept-Language': geoHeaders['Accept-Language'],
       'Accept-Encoding': 'gzip, deflate, br',
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
@@ -981,11 +983,12 @@ async function mobileBypass(videoId, sessionId) {
 
 async function embeddedBypass(videoId, sessionId) {
   // Use embed URL which has different detection rules
+  const geoHeaders = GEOLOCATION_HEADERS['us'];
   const response = await fetch(`https://www.youtube.com/embed/${videoId}`, {
     headers: {
-      'User-Agent': getRandomElement(REAL_BROWSER_AGENTS),
+      'User-Agent': getRandomElement(NEW_HEADLESS_CHROME_AGENTS),
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': getRandomElement(LANGUAGES),
+      'Accept-Language': geoHeaders['Accept-Language'],
       'Referer': 'https://google.com/',
       'X-Session-ID': sessionId
     }
@@ -1000,7 +1003,7 @@ async function apiBypass(videoId, sessionId) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'User-Agent': getRandomElement(REAL_BROWSER_AGENTS),
+      'User-Agent': getRandomElement(NEW_HEADLESS_CHROME_AGENTS),
       'X-Session-ID': sessionId
     },
     body: JSON.stringify({
@@ -1039,14 +1042,15 @@ async function apiBypass(videoId, sessionId) {
 
 async function stealthDesktop(videoId, sessionId) {
   // Maximum stealth desktop browser simulation
+  const geoHeaders = GEOLOCATION_HEADERS['us'];
   const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
     headers: {
-      'User-Agent': getRandomElement(REAL_BROWSER_AGENTS),
+      'User-Agent': getRandomElement(NEW_HEADLESS_CHROME_AGENTS),
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-      'Accept-Language': getRandomElement(LANGUAGES),
+      'Accept-Language': geoHeaders['Accept-Language'],
       'Accept-Encoding': 'gzip, deflate, br',
       'Cache-Control': 'max-age=0',
-      'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+      'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="121", "Google Chrome";v="121"',
       'Sec-Ch-Ua-Mobile': '?0',
       'Sec-Ch-Ua-Platform': '"Windows"',
       'Sec-Fetch-Dest': 'document',
