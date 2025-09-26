@@ -57,6 +57,35 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No video ID provided' });
   }
   
+  // DEMUS STRATEGY: Browser wrapper + ad blocker approach!
+  const demusStrategies = [
+    'demus_browser_wrapper',        // NEW: Browser wrapper like Demus uses
+    'demus_ad_blocker_bypass',      // NEW: Ad blocker bypass technique
+    'demus_web_interface',          // NEW: Direct web interface access
+    'demus_mobile_browser',         // NEW: Mobile browser simulation
+    'demus_iframe_extraction',      // NEW: iframe-based extraction
+    'demus_bookmark_system'         // NEW: Bookmark-based approach
+  ];
+  
+  for (const strategy of demusStrategies) {
+    try {
+      console.log(`🎵 [VERCEL PROXY] DEMUS STRATEGY: ${strategy} for ${id}`);
+      
+      const result = await useDemusStrategy(id, strategy);
+      if (result) {
+        console.log(`🎵 [VERCEL PROXY] DEMUS SUCCESS with ${strategy}: ${result.title}`);
+        return res.json(result);
+      }
+      
+      // Quick succession like Demus app
+      await sleep(Math.random() * 50 + 10);
+      
+    } catch (error) {
+      console.log(`🎵 [VERCEL PROXY] Demus strategy ${strategy} failed: ${error.message}`);
+      continue;
+    }
+  }
+  
   // RESIDENTIAL PROXY STRATEGY: Use clean home IPs like Musi does!
   const residentialProxyStrategies = [
     'proxyempire_residential',      // NEW: 9M rotating residential proxies
@@ -390,6 +419,390 @@ function generateRandomIP() {
   const range = getRandomElement(ranges);
   const lastOctet = Math.floor(Math.random() * 254) + 1;
   return `${range}.${lastOctet}`;
+}
+
+async function useDemusStrategy(videoId, strategy) {
+  switch (strategy) {
+    case 'demus_browser_wrapper':
+      return await demusBrowserWrapper(videoId);
+    case 'demus_ad_blocker_bypass':
+      return await demusAdBlockerBypass(videoId);
+    case 'demus_web_interface':
+      return await demusWebInterface(videoId);
+    case 'demus_mobile_browser':
+      return await demusMobileBrowser(videoId);
+    case 'demus_iframe_extraction':
+      return await demusIframeExtraction(videoId);
+    case 'demus_bookmark_system':
+      return await demusBookmarkSystem(videoId);
+    default:
+      throw new Error('Unknown Demus strategy');
+  }
+}
+
+async function demusBrowserWrapper(videoId) {
+  // DEMUS STRATEGY: Browser wrapper approach
+  console.log(`📱 [DEMUS] Browser wrapper for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    // Demus uses browser wrapper - simulate browsing to YouTube
+    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        'User-Agent': fingerprint.userAgent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.google.com/',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site',
+        'Cache-Control': 'no-cache',
+        'DNT': '1', // Do not track - ad blocker behavior
+        'X-Browser-Wrapper': 'Demus',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    
+    const html = await response.text();
+    
+    // Extract like browser would
+    const playerMatch = html.match(/var ytInitialPlayerResponse = ({.*?});/);
+    if (playerMatch) {
+      const playerData = JSON.parse(playerMatch[1]);
+      
+      if (playerData.streamingData && playerData.streamingData.adaptiveFormats) {
+        const audioFormats = playerData.streamingData.adaptiveFormats.filter(f => 
+          f.mimeType && f.mimeType.includes('audio/') && f.url
+        );
+        
+        if (audioFormats.length > 0) {
+          const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+          
+          return {
+            audioUrl: bestAudio.url,
+            title: playerData.videoDetails?.title || 'YouTube Audio',
+            artist: playerData.videoDetails?.author || 'YouTube',
+            duration: parseInt(playerData.videoDetails?.lengthSeconds) || 0,
+            videoId: videoId
+          };
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error(`Demus browser wrapper failed: ${error.message}`);
+  }
+  
+  throw new Error('Demus browser wrapper - no audio found');
+}
+
+async function demusAdBlockerBypass(videoId) {
+  // DEMUS STRATEGY: Ad blocker bypass technique
+  console.log(`📱 [DEMUS] Ad blocker bypass for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    // Simulate ad blocker headers that Demus uses
+    const response = await fetch(`https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': fingerprint.userAgent,
+        'Origin': 'https://www.youtube.com',
+        'Referer': 'https://www.youtube.com/',
+        'DNT': '1',
+        'Sec-GPC': '1', // Global Privacy Control (ad blocker signal)
+        'uBlock-Origin': '1.46.0', // uBlock Origin signature
+        'Ghostery': '8.5.4', // Ghostery ad blocker
+        'X-Ad-Blocker': 'enabled',
+        'X-Privacy-Mode': 'strict'
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'WEB',
+            clientVersion: '2.20231201.01.00',
+            hl: 'en',
+            gl: 'US'
+          }
+        },
+        videoId: videoId,
+        contentCheckOk: true,
+        racyCheckOk: true
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.streamingData && data.streamingData.adaptiveFormats) {
+      const audioFormats = data.streamingData.adaptiveFormats.filter(f => 
+        f.mimeType && f.mimeType.includes('audio/') && f.url
+      );
+      
+      if (audioFormats.length > 0) {
+        const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+        
+        return {
+          audioUrl: bestAudio.url,
+          title: data.videoDetails?.title || 'YouTube Audio',
+          artist: data.videoDetails?.author || 'YouTube',
+          duration: parseInt(data.videoDetails?.lengthSeconds) || 0,
+          videoId: videoId
+        };
+      }
+    }
+  } catch (error) {
+    throw new Error(`Demus ad blocker bypass failed: ${error.message}`);
+  }
+  
+  throw new Error('Demus ad blocker bypass - no audio found');
+}
+
+async function demusWebInterface(videoId) {
+  // DEMUS STRATEGY: Direct web interface access
+  console.log(`📱 [DEMUS] Web interface access for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    // Access YouTube like a browser with Demus-style headers
+    const response = await fetch(`https://www.youtube.com/get_video_info?video_id=${videoId}&el=detailpage&ps=default&eurl=&gl=US&hl=en`, {
+      headers: {
+        'User-Agent': fingerprint.userAgent,
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': `https://www.youtube.com/watch?v=${videoId}`,
+        'X-Requested-With': 'XMLHttpRequest',
+        'DNT': '1',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-origin'
+      }
+    });
+    
+    const text = await response.text();
+    const params = new URLSearchParams(text);
+    
+    if (params.get('status') === 'ok') {
+      const playerResponse = JSON.parse(params.get('player_response') || '{}');
+      
+      if (playerResponse.streamingData && playerResponse.streamingData.adaptiveFormats) {
+        const audioFormats = playerResponse.streamingData.adaptiveFormats.filter(f => 
+          f.mimeType && f.mimeType.includes('audio/') && f.url
+        );
+        
+        if (audioFormats.length > 0) {
+          const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+          
+          return {
+            audioUrl: bestAudio.url,
+            title: playerResponse.videoDetails?.title || 'YouTube Audio',
+            artist: playerResponse.videoDetails?.author || 'YouTube',
+            duration: parseInt(playerResponse.videoDetails?.lengthSeconds) || 0,
+            videoId: videoId
+          };
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error(`Demus web interface failed: ${error.message}`);
+  }
+  
+  throw new Error('Demus web interface - no audio found');
+}
+
+async function demusMobileBrowser(videoId) {
+  // DEMUS STRATEGY: Mobile browser simulation
+  console.log(`📱 [DEMUS] Mobile browser for ${videoId}`);
+  
+  try {
+    // Simulate mobile browser like Demus mobile app
+    const response = await fetch(`https://m.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'no-cache',
+        'X-Mobile-App': 'Demus'
+      }
+    });
+    
+    const html = await response.text();
+    
+    // Mobile extraction patterns
+    const patterns = [
+      /var ytInitialPlayerResponse = ({.*?});/s,
+      /"streamingData":\s*({.*?"adaptiveFormats".*?})/s,
+      /"player_response":"(.*?)"/
+    ];
+    
+    for (const pattern of patterns) {
+      try {
+        const match = html.match(pattern);
+        if (match) {
+          let playerData;
+          if (pattern.source.includes('player_response')) {
+            playerData = JSON.parse(decodeURIComponent(match[1]));
+          } else {
+            playerData = JSON.parse(match[1]);
+          }
+          
+          const streamingData = playerData.streamingData || playerData;
+          if (streamingData && streamingData.adaptiveFormats) {
+            const audioFormats = streamingData.adaptiveFormats.filter(f => 
+              f.mimeType && f.mimeType.includes('audio/') && f.url
+            );
+            
+            if (audioFormats.length > 0) {
+              const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+              
+              return {
+                audioUrl: bestAudio.url,
+                title: playerData.videoDetails?.title || 'YouTube Audio',
+                artist: playerData.videoDetails?.author || 'YouTube',
+                duration: parseInt(playerData.videoDetails?.lengthSeconds) || 0,
+                videoId: videoId
+              };
+            }
+          }
+        }
+      } catch (parseError) {
+        continue;
+      }
+    }
+  } catch (error) {
+    throw new Error(`Demus mobile browser failed: ${error.message}`);
+  }
+  
+  throw new Error('Demus mobile browser - no audio found');
+}
+
+async function demusIframeExtraction(videoId) {
+  // DEMUS STRATEGY: iframe-based extraction
+  console.log(`📱 [DEMUS] iframe extraction for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    // Use iframe approach like browser wrapper
+    const response = await fetch(`https://www.youtube.com/embed/${videoId}?autoplay=0&controls=1&disablekb=0&enablejsapi=1&fs=1&iv_load_policy=3&modestbranding=0&rel=0&showinfo=1`, {
+      headers: {
+        'User-Agent': fingerprint.userAgent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://demus.app/',
+        'X-Frame-Options': 'ALLOWALL',
+        'X-Content-Type-Options': 'nosniff',
+        'DNT': '1'
+      }
+    });
+    
+    const html = await response.text();
+    
+    // Extract from iframe
+    const configMatch = html.match(/"args":\s*({.*?})/);
+    if (configMatch) {
+      const config = JSON.parse(configMatch[1]);
+      
+      if (config.player_response) {
+        const playerResponse = JSON.parse(config.player_response);
+        
+        if (playerResponse.streamingData && playerResponse.streamingData.adaptiveFormats) {
+          const audioFormats = playerResponse.streamingData.adaptiveFormats.filter(f => 
+            f.mimeType && f.mimeType.includes('audio/') && f.url
+          );
+          
+          if (audioFormats.length > 0) {
+            const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+            
+            return {
+              audioUrl: bestAudio.url,
+              title: playerResponse.videoDetails?.title || 'YouTube Audio',
+              artist: playerResponse.videoDetails?.author || 'YouTube',
+              duration: parseInt(playerResponse.videoDetails?.lengthSeconds) || 0,
+              videoId: videoId
+            };
+          }
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error(`Demus iframe extraction failed: ${error.message}`);
+  }
+  
+  throw new Error('Demus iframe extraction - no audio found');
+}
+
+async function demusBookmarkSystem(videoId) {
+  // DEMUS STRATEGY: Bookmark-based approach
+  console.log(`📱 [DEMUS] Bookmark system for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    // Simulate bookmark-style access
+    const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`, {
+      headers: {
+        'User-Agent': fingerprint.userAgent,
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://demus.app/',
+        'X-Requested-With': 'XMLHttpRequest',
+        'DNT': '1'
+      }
+    });
+    
+    const oembed = await response.json();
+    
+    if (oembed.title) {
+      // Now get the actual stream using the metadata
+      const streamResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+        headers: {
+          'User-Agent': fingerprint.userAgent,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Referer': 'https://demus.app/',
+          'X-Bookmark-Request': 'true',
+          'DNT': '1'
+        }
+      });
+      
+      const html = await streamResponse.text();
+      const playerMatch = html.match(/var ytInitialPlayerResponse = ({.*?});/);
+      
+      if (playerMatch) {
+        const playerData = JSON.parse(playerMatch[1]);
+        
+        if (playerData.streamingData && playerData.streamingData.adaptiveFormats) {
+          const audioFormats = playerData.streamingData.adaptiveFormats.filter(f => 
+            f.mimeType && f.mimeType.includes('audio/') && f.url
+          );
+          
+          if (audioFormats.length > 0) {
+            const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+            
+            return {
+              audioUrl: bestAudio.url,
+              title: oembed.title || 'YouTube Audio',
+              artist: oembed.author_name || 'YouTube',
+              duration: 0,
+              videoId: videoId
+            };
+          }
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error(`Demus bookmark system failed: ${error.message}`);
+  }
+  
+  throw new Error('Demus bookmark system - no audio found');
 }
 
 async function useResidentialProxy(videoId, strategy) {
