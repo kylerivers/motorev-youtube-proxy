@@ -42,7 +42,34 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No video ID provided' });
   }
   
-  // Anti-detection strategy rotation
+  // NUCLEAR OPTION: Use working public YouTube proxy services
+  const workingProxyServices = [
+    'y2mate_bypass',
+    'ytdl_public_api',
+    'cobalt_tools',
+    'yt1s_bypass'
+  ];
+  
+  for (const service of workingProxyServices) {
+    try {
+      console.log(`🎵 [VERCEL PROXY] Trying working service: ${service} for ${id}`);
+      
+      const result = await useWorkingService(id, service);
+      if (result) {
+        console.log(`🎵 [VERCEL PROXY] SUCCESS with ${service}: ${result.title}`);
+        return res.json(result);
+      }
+      
+      // Short delay between services
+      await sleep(1000);
+      
+    } catch (error) {
+      console.log(`🎵 [VERCEL PROXY] Service ${service} failed: ${error.message}`);
+      continue;
+    }
+  }
+  
+  // Fallback to advanced strategies if public services fail
   const strategies = [
     'mobile_bypass',
     'embedded_bypass', 
@@ -52,7 +79,7 @@ export default async function handler(req, res) {
   
   for (const strategy of strategies) {
     try {
-      console.log(`🎵 [VERCEL PROXY] Trying strategy: ${strategy} for ${id}`);
+      console.log(`🎵 [VERCEL PROXY] Fallback strategy: ${strategy} for ${id}`);
       
       const result = await attemptExtraction(id, strategy);
       if (result) {
@@ -60,7 +87,6 @@ export default async function handler(req, res) {
         return res.json(result);
       }
       
-      // Random delay between attempts to avoid rate limiting
       await sleep(Math.random() * 2000 + 1000);
       
     } catch (error) {
@@ -70,10 +96,159 @@ export default async function handler(req, res) {
   }
   
   return res.status(500).json({ 
-    error: 'All extraction strategies failed',
-    details: 'YouTube has blocked all known extraction methods',
+    error: 'All extraction methods failed',
+    details: 'YouTube blocking all known techniques',
     videoId: id
   });
+}
+
+async function useWorkingService(videoId, service) {
+  switch (service) {
+    case 'y2mate_bypass':
+      return await y2mateBypass(videoId);
+    case 'ytdl_public_api':
+      return await ytdlPublicApi(videoId);
+    case 'cobalt_tools':
+      return await cobaltTools(videoId);
+    case 'yt1s_bypass':
+      return await yt1sBypass(videoId);
+    default:
+      throw new Error('Unknown service');
+  }
+}
+
+async function y2mateBypass(videoId) {
+  // Y2mate has working YouTube extraction
+  try {
+    const response = await fetch('https://www.y2mate.com/mates/analyzeV2/ajax', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.y2mate.com/'
+      },
+      body: `url=https://www.youtube.com/watch?v=${videoId}&q_auto=1&ajax=1`
+    });
+    
+    const data = await response.json();
+    if (data.status === 'ok' && data.result) {
+      // Parse HTML response for audio links
+      const audioMatch = data.result.match(/data-fquality="128"[^>]*data-ftype="mp3"[^>]*href="([^"]+)"/);
+      if (audioMatch) {
+        return {
+          audioUrl: audioMatch[1],
+          title: data.title || 'Unknown Title',
+          artist: 'YouTube',
+          duration: 0,
+          videoId: videoId
+        };
+      }
+    }
+  } catch (error) {
+    throw new Error(`Y2mate failed: ${error.message}`);
+  }
+  
+  throw new Error('Y2mate - no audio found');
+}
+
+async function ytdlPublicApi(videoId) {
+  // Try public YTDL API services
+  const publicApis = [
+    'https://youtube-dl-api.herokuapp.com/api/info',
+    'https://ytdl-api.vercel.app/api/info'
+  ];
+  
+  for (const apiUrl of publicApis) {
+    try {
+      const response = await fetch(`${apiUrl}?url=https://www.youtube.com/watch?v=${videoId}`);
+      const data = await response.json();
+      
+      if (data.formats) {
+        const audioFormats = data.formats.filter(f => f.acodec && f.acodec !== 'none' && f.url);
+        if (audioFormats.length > 0) {
+          const bestAudio = audioFormats.sort((a, b) => (b.abr || 0) - (a.abr || 0))[0];
+          
+          return {
+            audioUrl: bestAudio.url,
+            title: data.title || 'Unknown Title',
+            artist: data.uploader || 'YouTube',
+            duration: data.duration || 0,
+            videoId: videoId
+          };
+        }
+      }
+    } catch (error) {
+      continue;
+    }
+  }
+  
+  throw new Error('Public YTDL APIs failed');
+}
+
+async function cobaltTools(videoId) {
+  // Cobalt.tools is a popular YouTube downloader
+  try {
+    const response = await fetch('https://co.wuk.sh/api/json', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        isAudioOnly: true,
+        aFormat: 'mp3'
+      })
+    });
+    
+    const data = await response.json();
+    if (data.status === 'success' && data.url) {
+      return {
+        audioUrl: data.url,
+        title: 'YouTube Audio',
+        artist: 'YouTube',
+        duration: 0,
+        videoId: videoId
+      };
+    }
+  } catch (error) {
+    throw new Error(`Cobalt.tools failed: ${error.message}`);
+  }
+  
+  throw new Error('Cobalt.tools - no audio found');
+}
+
+async function yt1sBypass(videoId) {
+  // YT1S is another working service
+  try {
+    const response = await fetch('https://www.yt1s.com/api/ajaxSearch/index', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      body: `q=https://www.youtube.com/watch?v=${videoId}&vt=home`
+    });
+    
+    const data = await response.json();
+    if (data.status === 'ok' && data.result) {
+      // Parse for MP3 download links
+      const mp3Match = data.result.match(/data-ftype="mp3"[^>]*data-fquality="128"[^>]*href="([^"]+)"/);
+      if (mp3Match) {
+        return {
+          audioUrl: mp3Match[1],
+          title: data.title || 'Unknown Title',
+          artist: 'YouTube',
+          duration: 0,
+          videoId: videoId
+        };
+      }
+    }
+  } catch (error) {
+    throw new Error(`YT1S failed: ${error.message}`);
+  }
+  
+  throw new Error('YT1S - no audio found');
 }
 
 async function attemptExtraction(videoId, strategy) {
