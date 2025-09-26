@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   // Enable CORS for Railway requests
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -50,12 +50,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
   
-  const { videoId, videoUrl } = req.body || {};
+  const { videoId, videoUrl, userAuth } = req.body || {};
   const id = videoId || (videoUrl ? videoUrl.split('v=')[1]?.split('&')[0] : null);
   
   if (!id) {
     return res.status(400).json({ error: 'No video ID provided' });
   }
+  
+  // YOUTUBE AUTH: User authentication cookies for legitimate sessions
+  const youtubeAuth = userAuth || {};
   
   // DEMUS STRATEGY: Browser wrapper + ad blocker approach!
   const demusStrategies = [
@@ -71,7 +74,7 @@ export default async function handler(req, res) {
     try {
       console.log(`🎵 [VERCEL PROXY] DEMUS STRATEGY: ${strategy} for ${id}`);
       
-      const result = await useDemusStrategy(id, strategy);
+      const result = await useDemusStrategy(id, strategy, youtubeAuth);
       if (result) {
         console.log(`🎵 [VERCEL PROXY] DEMUS SUCCESS with ${strategy}: ${result.title}`);
         return res.json(result);
@@ -421,36 +424,44 @@ function generateRandomIP() {
   return `${range}.${lastOctet}`;
 }
 
-async function useDemusStrategy(videoId, strategy) {
+async function useDemusStrategy(videoId, strategy, youtubeAuth = {}) {
   switch (strategy) {
     case 'demus_browser_wrapper':
-      return await demusBrowserWrapper(videoId);
+      return await demusBrowserWrapper(videoId, youtubeAuth);
     case 'demus_ad_blocker_bypass':
-      return await demusAdBlockerBypass(videoId);
+      return await demusAdBlockerBypass(videoId, youtubeAuth);
     case 'demus_web_interface':
-      return await demusWebInterface(videoId);
+      return await demusWebInterface(videoId, youtubeAuth);
     case 'demus_mobile_browser':
-      return await demusMobileBrowser(videoId);
+      return await demusMobileBrowser(videoId, youtubeAuth);
     case 'demus_iframe_extraction':
-      return await demusIframeExtraction(videoId);
+      return await demusIframeExtraction(videoId, youtubeAuth);
     case 'demus_bookmark_system':
-      return await demusBookmarkSystem(videoId);
+      return await demusBookmarkSystem(videoId, youtubeAuth);
     default:
       throw new Error('Unknown Demus strategy');
   }
 }
 
-async function demusBrowserWrapper(videoId) {
-  // DEMUS STRATEGY: Browser wrapper approach
-  console.log(`📱 [DEMUS] Browser wrapper for ${videoId}`);
+async function demusBrowserWrapper(videoId, youtubeAuth = {}) {
+  // DEMUS STRATEGY: Browser wrapper approach with YouTube authentication
+  console.log(`📱 [DEMUS] Authenticated browser wrapper for ${videoId}`);
   
   const fingerprint = generateBrowserFingerprint();
   
+  // Build authentication headers
+  const authHeaders = {};
+  if (youtubeAuth.sessionToken) {
+    authHeaders['Cookie'] = `SAPISID=${youtubeAuth.sessionToken}; HSID=${youtubeAuth.sessionId}; SSID=${youtubeAuth.ssid}; APISID=${youtubeAuth.apiSid}; SID=${youtubeAuth.sid}`;
+    authHeaders['Authorization'] = `Bearer ${youtubeAuth.accessToken}`;
+  }
+  
   try {
-    // Demus uses browser wrapper - simulate browsing to YouTube
+    // Demus uses browser wrapper - simulate browsing to YouTube with auth
     const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
       headers: {
         'User-Agent': fingerprint.userAgent,
+        ...authHeaders,
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'https://www.google.com/',
@@ -496,19 +507,27 @@ async function demusBrowserWrapper(videoId) {
   throw new Error('Demus browser wrapper - no audio found');
 }
 
-async function demusAdBlockerBypass(videoId) {
-  // DEMUS STRATEGY: Ad blocker bypass technique
-  console.log(`📱 [DEMUS] Ad blocker bypass for ${videoId}`);
+async function demusAdBlockerBypass(videoId, youtubeAuth = {}) {
+  // DEMUS STRATEGY: Ad blocker bypass technique with authentication
+  console.log(`📱 [DEMUS] Authenticated ad blocker bypass for ${videoId}`);
   
   const fingerprint = generateBrowserFingerprint();
   
+  // Build authentication headers
+  const authHeaders = {};
+  if (youtubeAuth.sessionToken) {
+    authHeaders['Cookie'] = `SAPISID=${youtubeAuth.sessionToken}; HSID=${youtubeAuth.sessionId}; SSID=${youtubeAuth.ssid}; APISID=${youtubeAuth.apiSid}; SID=${youtubeAuth.sid}`;
+    authHeaders['Authorization'] = `Bearer ${youtubeAuth.accessToken}`;
+  }
+  
   try {
-    // Simulate ad blocker headers that Demus uses
+    // Simulate ad blocker headers that Demus uses with authentication
     const response = await fetch(`https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': fingerprint.userAgent,
+        ...authHeaders,
         'Origin': 'https://www.youtube.com',
         'Referer': 'https://www.youtube.com/',
         'DNT': '1',
@@ -559,7 +578,7 @@ async function demusAdBlockerBypass(videoId) {
   throw new Error('Demus ad blocker bypass - no audio found');
 }
 
-async function demusWebInterface(videoId) {
+async function demusWebInterface(videoId, youtubeAuth = {}) {
   // DEMUS STRATEGY: Direct web interface access
   console.log(`📱 [DEMUS] Web interface access for ${videoId}`);
   
@@ -612,7 +631,7 @@ async function demusWebInterface(videoId) {
   throw new Error('Demus web interface - no audio found');
 }
 
-async function demusMobileBrowser(videoId) {
+async function demusMobileBrowser(videoId, youtubeAuth = {}) {
   // DEMUS STRATEGY: Mobile browser simulation
   console.log(`📱 [DEMUS] Mobile browser for ${videoId}`);
   
@@ -683,7 +702,7 @@ async function demusMobileBrowser(videoId) {
   throw new Error('Demus mobile browser - no audio found');
 }
 
-async function demusIframeExtraction(videoId) {
+async function demusIframeExtraction(videoId, youtubeAuth = {}) {
   // DEMUS STRATEGY: iframe-based extraction
   console.log(`📱 [DEMUS] iframe extraction for ${videoId}`);
   
@@ -739,7 +758,7 @@ async function demusIframeExtraction(videoId) {
   throw new Error('Demus iframe extraction - no audio found');
 }
 
-async function demusBookmarkSystem(videoId) {
+async function demusBookmarkSystem(videoId, youtubeAuth = {}) {
   // DEMUS STRATEGY: Bookmark-based approach
   console.log(`📱 [DEMUS] Bookmark system for ${videoId}`);
   
