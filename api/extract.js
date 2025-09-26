@@ -57,6 +57,35 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'No video ID provided' });
   }
   
+  // MUSI APP STRATEGY: Use YouTube's non-public interfaces like Musi did!
+  const musiStrategies = [
+    'musi_internal_player',         // NEW: Musi's internal player interface
+    'youtube_innertube_api',        // NEW: YouTube's InnerTube API (non-public)
+    'youtube_web_player',           // NEW: Direct web player access
+    'youtube_embed_bypass',         // NEW: Embed player non-public access
+    'android_youtube_api',          // NEW: Android YouTube app API calls
+    'ios_youtube_api'               // NEW: iOS YouTube app API calls
+  ];
+  
+  for (const strategy of musiStrategies) {
+    try {
+      console.log(`🎵 [VERCEL PROXY] MUSI STRATEGY: ${strategy} for ${id}`);
+      
+      const result = await useMusiStrategy(id, strategy);
+      if (result) {
+        console.log(`🎵 [VERCEL PROXY] MUSI SUCCESS with ${strategy}: ${result.title}`);
+        return res.json(result);
+      }
+      
+      // Rapid succession like Musi app
+      await sleep(Math.random() * 200 + 50);
+      
+    } catch (error) {
+      console.log(`🎵 [VERCEL PROXY] Musi strategy ${strategy} failed: ${error.message}`);
+      continue;
+    }
+  }
+  
   // MASSIVE COORDINATED ATTACK: Use EVERY working service found in 2024
   const workingServices2024 = [
     'savefrom_net',                 // NEW: SaveFrom.net - PROVEN WORKING 2024
@@ -332,6 +361,342 @@ function generateRandomIP() {
   const range = getRandomElement(ranges);
   const lastOctet = Math.floor(Math.random() * 254) + 1;
   return `${range}.${lastOctet}`;
+}
+
+async function useMusiStrategy(videoId, strategy) {
+  switch (strategy) {
+    case 'musi_internal_player':
+      return await musiInternalPlayer(videoId);
+    case 'youtube_innertube_api':
+      return await youtubeInnerTubeAPI(videoId);
+    case 'youtube_web_player':
+      return await youtubeWebPlayer(videoId);
+    case 'youtube_embed_bypass':
+      return await youtubeEmbedBypass(videoId);
+    case 'android_youtube_api':
+      return await androidYouTubeAPI(videoId);
+    case 'ios_youtube_api':
+      return await iosYouTubeAPI(videoId);
+    default:
+      throw new Error('Unknown Musi strategy');
+  }
+}
+
+async function musiInternalPlayer(videoId) {
+  // MUSI'S EXACT STRATEGY: Access YouTube's internal player interface
+  console.log(`🎵 [MUSI] Internal player interface for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    // Musi app approach: Direct player access without public API
+    const response = await fetch(`https://www.youtube.com/watch?v=${videoId}&bpctr=9999999999&has_verified=1`, {
+      headers: {
+        'User-Agent': fingerprint.userAgent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.youtube.com/',
+        'Origin': 'https://www.youtube.com',
+        'X-YouTube-Client-Name': '1',
+        'X-YouTube-Client-Version': '2.20231201.01.00'
+      }
+    });
+    
+    const html = await response.text();
+    
+    // Extract player response like Musi did
+    const playerMatch = html.match(/var ytInitialPlayerResponse = ({.*?});/);
+    if (playerMatch) {
+      const playerData = JSON.parse(playerMatch[1]);
+      
+      if (playerData.streamingData && playerData.streamingData.adaptiveFormats) {
+        const audioFormats = playerData.streamingData.adaptiveFormats.filter(f => 
+          f.mimeType && f.mimeType.includes('audio/') && f.url
+        );
+        
+        if (audioFormats.length > 0) {
+          const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+          
+          return {
+            audioUrl: bestAudio.url,
+            title: playerData.videoDetails?.title || 'YouTube Audio',
+            artist: playerData.videoDetails?.author || 'YouTube',
+            duration: parseInt(playerData.videoDetails?.lengthSeconds) || 0,
+            videoId: videoId
+          };
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error(`Musi internal player failed: ${error.message}`);
+  }
+  
+  throw new Error('Musi internal player - no audio found');
+}
+
+async function youtubeInnerTubeAPI(videoId) {
+  // MUSI STRATEGY: YouTube's InnerTube API (non-public interface)
+  console.log(`🎵 [MUSI] InnerTube API for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    const response = await fetch('https://www.youtube.com/youtubei/v1/player?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': fingerprint.userAgent,
+        'X-YouTube-Client-Name': '1',
+        'X-YouTube-Client-Version': '2.20231201.01.00',
+        'X-Goog-Api-Key': 'AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8'
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'WEB',
+            clientVersion: '2.20231201.01.00',
+            hl: 'en',
+            gl: 'US'
+          }
+        },
+        videoId: videoId,
+        playbackContext: {
+          contentPlaybackContext: {
+            html5Preference: 'HTML5_PREF_WANTS'
+          }
+        },
+        contentCheckOk: true,
+        racyCheckOk: true
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.streamingData && data.streamingData.adaptiveFormats) {
+      const audioFormats = data.streamingData.adaptiveFormats.filter(f => 
+        f.mimeType && f.mimeType.includes('audio/') && f.url
+      );
+      
+      if (audioFormats.length > 0) {
+        const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+        
+        return {
+          audioUrl: bestAudio.url,
+          title: data.videoDetails?.title || 'YouTube Audio',
+          artist: data.videoDetails?.author || 'YouTube',
+          duration: parseInt(data.videoDetails?.lengthSeconds) || 0,
+          videoId: videoId
+        };
+      }
+    }
+  } catch (error) {
+    throw new Error(`InnerTube API failed: ${error.message}`);
+  }
+  
+  throw new Error('InnerTube API - no audio found');
+}
+
+async function youtubeWebPlayer(videoId) {
+  // MUSI STRATEGY: Direct web player access
+  console.log(`🎵 [MUSI] Web player access for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    const response = await fetch(`https://www.youtube.com/get_video_info?video_id=${videoId}&el=detailpage&ps=default&eurl=&gl=US&hl=en`, {
+      headers: {
+        'User-Agent': fingerprint.userAgent,
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': `https://www.youtube.com/watch?v=${videoId}`
+      }
+    });
+    
+    const text = await response.text();
+    const params = new URLSearchParams(text);
+    
+    if (params.get('status') === 'ok') {
+      const playerResponse = JSON.parse(params.get('player_response') || '{}');
+      
+      if (playerResponse.streamingData && playerResponse.streamingData.adaptiveFormats) {
+        const audioFormats = playerResponse.streamingData.adaptiveFormats.filter(f => 
+          f.mimeType && f.mimeType.includes('audio/') && f.url
+        );
+        
+        if (audioFormats.length > 0) {
+          const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+          
+          return {
+            audioUrl: bestAudio.url,
+            title: playerResponse.videoDetails?.title || 'YouTube Audio',
+            artist: playerResponse.videoDetails?.author || 'YouTube',
+            duration: parseInt(playerResponse.videoDetails?.lengthSeconds) || 0,
+            videoId: videoId
+          };
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error(`Web player access failed: ${error.message}`);
+  }
+  
+  throw new Error('Web player access - no audio found');
+}
+
+async function youtubeEmbedBypass(videoId) {
+  // MUSI STRATEGY: Embed player non-public access
+  console.log(`🎵 [MUSI] Embed bypass for ${videoId}`);
+  
+  const fingerprint = generateBrowserFingerprint();
+  
+  try {
+    const response = await fetch(`https://www.youtube.com/embed/${videoId}?autoplay=0&controls=0&disablekb=1&enablejsapi=1&fs=0&iv_load_policy=3&modestbranding=1&rel=0&showinfo=0`, {
+      headers: {
+        'User-Agent': fingerprint.userAgent,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.youtube.com/'
+      }
+    });
+    
+    const html = await response.text();
+    
+    // Extract embed player data
+    const configMatch = html.match(/"args":\s*({.*?})/);
+    if (configMatch) {
+      const config = JSON.parse(configMatch[1]);
+      
+      if (config.player_response) {
+        const playerResponse = JSON.parse(config.player_response);
+        
+        if (playerResponse.streamingData && playerResponse.streamingData.adaptiveFormats) {
+          const audioFormats = playerResponse.streamingData.adaptiveFormats.filter(f => 
+            f.mimeType && f.mimeType.includes('audio/') && f.url
+          );
+          
+          if (audioFormats.length > 0) {
+            const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+            
+            return {
+              audioUrl: bestAudio.url,
+              title: playerResponse.videoDetails?.title || 'YouTube Audio',
+              artist: playerResponse.videoDetails?.author || 'YouTube',
+              duration: parseInt(playerResponse.videoDetails?.lengthSeconds) || 0,
+              videoId: videoId
+            };
+          }
+        }
+      }
+    }
+  } catch (error) {
+    throw new Error(`Embed bypass failed: ${error.message}`);
+  }
+  
+  throw new Error('Embed bypass - no audio found');
+}
+
+async function androidYouTubeAPI(videoId) {
+  // MUSI STRATEGY: Android YouTube app API calls
+  console.log(`🎵 [MUSI] Android API for ${videoId}`);
+  
+  try {
+    const response = await fetch('https://www.youtube.com/youtubei/v1/player?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'com.google.android.youtube/19.09.36 (Linux; U; Android 11) gzip'
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'ANDROID',
+            clientVersion: '19.09.36',
+            androidSdkVersion: 30,
+            hl: 'en',
+            gl: 'US'
+          }
+        },
+        videoId: videoId
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.streamingData && data.streamingData.adaptiveFormats) {
+      const audioFormats = data.streamingData.adaptiveFormats.filter(f => 
+        f.mimeType && f.mimeType.includes('audio/') && f.url
+      );
+      
+      if (audioFormats.length > 0) {
+        const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+        
+        return {
+          audioUrl: bestAudio.url,
+          title: data.videoDetails?.title || 'YouTube Audio',
+          artist: data.videoDetails?.author || 'YouTube',
+          duration: parseInt(data.videoDetails?.lengthSeconds) || 0,
+          videoId: videoId
+        };
+      }
+    }
+  } catch (error) {
+    throw new Error(`Android API failed: ${error.message}`);
+  }
+  
+  throw new Error('Android API - no audio found');
+}
+
+async function iosYouTubeAPI(videoId) {
+  // MUSI STRATEGY: iOS YouTube app API calls
+  console.log(`🎵 [MUSI] iOS API for ${videoId}`);
+  
+  try {
+    const response = await fetch('https://www.youtube.com/youtubei/v1/player?key=AIzaSyB-63vPrdThhKuerbB2N_l7Kwwcxj6yUAc', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'com.google.ios.youtube/19.09.3 (iPhone14,3; U; CPU iOS 17_0 like Mac OS X)'
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'IOS',
+            clientVersion: '19.09.3',
+            deviceModel: 'iPhone14,3',
+            osName: 'iPhone',
+            osVersion: '17.0.0.21A329',
+            hl: 'en',
+            gl: 'US'
+          }
+        },
+        videoId: videoId
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.streamingData && data.streamingData.adaptiveFormats) {
+      const audioFormats = data.streamingData.adaptiveFormats.filter(f => 
+        f.mimeType && f.mimeType.includes('audio/') && f.url
+      );
+      
+      if (audioFormats.length > 0) {
+        const bestAudio = audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+        
+        return {
+          audioUrl: bestAudio.url,
+          title: data.videoDetails?.title || 'YouTube Audio',
+          artist: data.videoDetails?.author || 'YouTube',
+          duration: parseInt(data.videoDetails?.lengthSeconds) || 0,
+          videoId: videoId
+        };
+      }
+    }
+  } catch (error) {
+    throw new Error(`iOS API failed: ${error.message}`);
+  }
+  
+  throw new Error('iOS API - no audio found');
 }
 
 async function use2024WorkingService(videoId, service) {
